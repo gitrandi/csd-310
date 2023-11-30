@@ -1,6 +1,14 @@
 import mysql.connector
 from mysql.connector import errorcode
 
+config = {
+    'user': 'randi',
+    'password': 'Basecode!257s',
+    'host': 'localhost',
+    'database': 'pysports',
+    'raise_on_warnings': True,
+}
+
 try:
     db = mysql.connector.connect(**config)
     print("\n Database user {} connected to MySQL on host {} with database {}".format(config["user"], config["host"], config["database"]))
