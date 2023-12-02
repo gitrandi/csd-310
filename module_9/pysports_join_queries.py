@@ -1,10 +1,13 @@
 import mysql.connector
-from mysql.connector import Error
 
-connection = mysql.connector.connect(host="localhost",
-user="root",
-passwd="Basecode!257s",
-db="pysports")
+# Database configuration
+config = {
+    'user': 'randi',
+    'password': 'Basecode!257s',
+    'host': 'localhost',
+    'database': 'pysports',
+    'raise_on_warnings': True,
+}
 
 try:
     # Connect to the MySQL database
