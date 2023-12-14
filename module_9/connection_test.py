@@ -2,9 +2,9 @@ import mysql.connector
 from mysql.connector import Error
 
 connection = mysql.connector.connect(host="localhost,
-                                     user="root",
-                                     passwd="Basecode!257s",
-                                     db="pysports")
+user="root",
+passwd="Basecode!257s",
+db="pysports")
 
 try:
     if connection.is_connected():
