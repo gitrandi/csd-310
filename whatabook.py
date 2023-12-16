@@ -1,154 +1,147 @@
+import sys
 import mysql.connector
-from mysql.connector import Error
+from mysql.connector import errorcode
 
-# Database Initialization
-conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="Bellevue!23b",
-    database="whatabook"
-)
-cursor = conn.cursor()
+# Database configuration
+DB_CONFIG = {
+    "user": "whatabook_user",
+    "password": "MySQL8IsGreat!",
+    "host": "127.0.0.1",
+    "database": "whatabook",
+    "raise_on_warnings": True
+}
 
-# Create Tables
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Locations (
-        location_id INT AUTO_INCREMENT PRIMARY KEY,
-        location_name VARCHAR(255) NOT NULL
-    )
-''')
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Hours (
-        location_id INT,
-        day VARCHAR(255),
-        open_time TIME,
-        close_time TIME,
-        PRIMARY KEY (location_id, day),
-        FOREIGN KEY (location_id) REFERENCES Locations(location_id)
-    )
-''')
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Books (
-        book_id INT AUTO_INCREMENT PRIMARY KEY,
-        book_name VARCHAR(255) NOT NULL,
-        author VARCHAR(255) NOT NULL,
-        details TEXT
-    )
-''')
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Users (
-        user_id INT AUTO_INCREMENT PRIMARY KEY,
-        email VARCHAR(255) NOT NULL,
-        first_name VARCHAR(255) NOT NULL,
-        last_name VARCHAR(255) NOT NULL
-    )
-''')
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS Wishlist (
-        user_id INT,
-        book_id INT,
-        PRIMARY KEY (user_id, book_id),
-        FOREIGN KEY (user_id) REFERENCES Users(user_id),
-        FOREIGN KEY (book_id) REFERENCES Books(book_id)
-    )
-''')
-
-# Function to display the main menu
 def show_menu():
-    print("Menu:")
-    print("1. View Books")
-    print("2. View Store Locations")
-    print("3. My Account")
-    print("4. Exit Program")
+    print("\n  -- Main Menu --")
+    print("    1. View Books\n    2. View Store Locations\n    3. My Account\n    4. Exit Program")
 
-# Function to display the books
+    try:
+        choice = int(input('      <Example enter: 1 for book listing>: '))
+        return choice
+    except ValueError:
+        print("\n  Invalid number, program terminated...\n")
+        sys.exit(0)
+
+def execute_query(cursor, query):
+    cursor.execute(query)
+    return cursor.fetchall()
+
 def show_books(cursor):
-    cursor.execute("SELECT * FROM Books")
-    books = cursor.fetchall()
-    print("Books:")
+    query = "SELECT book_id, book_name, author, details FROM book"
+    books = execute_query(cursor, query)
+
+    print("\n  -- DISPLAYING BOOK LISTING --")
     for book in books:
-        print(f"{book[0]}. {book[1]} by {book[2]} - {book[3]}")
+        print(f"  Book ID: {book[0]}\n  Book Name: {book[1]}\n  Author: {book[2]}\n")
 
-# Function to display store locations
 def show_locations(cursor):
-    cursor.execute("SELECT * FROM Locations")
-    locations = cursor.fetchall()
-    print("Store Locations:")
+    query = "SELECT store_id, locale FROM store"
+    locations = execute_query(cursor, query)
+
+    print("\n  -- DISPLAYING STORE LOCATIONS --")
     for location in locations:
-        print(f"{location[0]}. {location[1]}")
+        print(f"  Locale: {location[1]}\n")
 
-# Function to validate user and return user_id
-def validate_user(cursor):
-    user_id = input("Enter your user_id: ")
-    cursor.execute("SELECT * FROM Users WHERE user_id=%s", (user_id,))
-    user = cursor.fetchone()
-    if user:
+def validate_user():
+    try:
+        user_id = int(input('\n      Enter a customer ID <Example 1 for user_id 1>: '))
+        if not 0 <= user_id <= 3:
+            print("\n  Invalid customer number, program terminated...\n")
+            sys.exit(0)
         return user_id
-    else:
-        print("Invalid user_id. Please try again.")
-        return validate_user(cursor)
+    except ValueError:
+        print("\n  Invalid number, program terminated...\n")
+        sys.exit(0)
 
-# Function to display account menu
 def show_account_menu():
-    print("Account Menu:")
-    print("1. Wishlist")
-    print("2. Add Book")
-    print("3. Main Menu")
+    try:
+        print("\n      -- Customer Menu --")
+        print("        1. Wishlist\n        2. Add Book\n        3. Main Menu")
+        account_option = int(input('        <Example enter: 1 for wishlist>: '))
+        return account_option
+    except ValueError:
+        print("\n  Invalid number, program terminated...\n")
+        sys.exit(0)
 
-# Function to display user's wishlist
 def show_wishlist(cursor, user_id):
-    cursor.execute("SELECT Books.* FROM Books INNER JOIN Wishlist ON Books.book_id = Wishlist.book_id WHERE Wishlist.user_id=%s", (user_id,))
-    wishlist = cursor.fetchall()
-    print("Wishlist:")
+    query = f"SELECT user.user_id, user.first_name, user.last_name, book.book_id, book.book_name, book.author " \
+            f"FROM wishlist " \
+            f"INNER JOIN user ON wishlist.user_id = user.user_id " \
+            f"INNER JOIN book ON wishlist.book_id = book.book_id " \
+            f"WHERE user.user_id = {user_id}"
+    
+    wishlist = execute_query(cursor, query)
+
+    print("\n        -- DISPLAYING WISHLIST ITEMS --")
     for book in wishlist:
-        print(f"{book[0]}. {book[1]} by {book[2]} - {book[3]}")
+        print(f"        Book Name: {book[4]}\n        Author: {book[5]}\n")
 
-# Function to display books not in the user's wishlist
 def show_books_to_add(cursor, user_id):
-    cursor.execute("SELECT * FROM Books WHERE book_id NOT IN (SELECT book_id FROM Wishlist WHERE user_id=%s)", (user_id,))
-    books_to_add = cursor.fetchall()
-    print("Books to Add:")
+    query = f"SELECT book_id, book_name, author, details " \
+            f"FROM book " \
+            f"WHERE book_id NOT IN (SELECT book_id FROM wishlist WHERE user_id = {user_id})"
+    
+    books_to_add = execute_query(cursor, query)
+
+    print("\n        -- DISPLAYING AVAILABLE BOOKS --")
     for book in books_to_add:
-        print(f"{book[0]}. {book[1]} by {book[2]} - {book[3]}")
+        print(f"        Book ID: {book[0]}\n        Book Name: {book[1]}\n")
 
-# Function to add a book to the user's wishlist
 def add_book_to_wishlist(cursor, user_id, book_id):
-    cursor.execute("INSERT INTO Wishlist (user_id, book_id) VALUES (%s, %s)", (user_id, book_id))
-    print("Book added to Wishlist!")
+    query = f"INSERT INTO wishlist(user_id, book_id) VALUES({user_id}, {book_id})"
+    execute_query(cursor, query)
 
-# Main Program
-while True:
-    show_menu()
-    choice = input("Enter your choice: ")
+def main():
+    try:
+        # Connect to the WhatABook database
+        db = mysql.connector.connect(**DB_CONFIG)
+        cursor = db.cursor()
 
-    if choice == '1':
-        show_books(cursor)
-    elif choice == '2':
-        show_locations(cursor)
-    elif choice == '3':
-        user_id = validate_user(cursor)
-        while True:
-            show_account_menu()
-            account_choice = input("Enter your choice: ")
+        print("\n  Welcome to the WhatABook Application! ")
 
-            if account_choice == '1':
-                show_wishlist(cursor, user_id)
-            elif account_choice == '2':
-                show_books_to_add(cursor, user_id)
-                book_id_to_add = input("Enter the book_id to add to your Wishlist: ")
-                add_book_to_wishlist(cursor, user_id, book_id_to_add)
-            elif account_choice == '3':
-                break
-            else:
-                print("Invalid choice. Please try again.")
-    elif choice == '4':
-        break
-    else:
-        print("Invalid choice. Please try again.")
+        user_selection = show_menu()
 
-# Close the database connection
-conn.close()
+        while user_selection != 4:
+            if user_selection == 1:
+                show_books(cursor)
+            elif user_selection == 2:
+                show_locations(cursor)
+            elif user_selection == 3:
+                my_user_id = validate_user()
+                account_option = show_account_menu()
+
+                while account_option != 3:
+                    if account_option == 1:
+                        show_wishlist(cursor, my_user_id)
+                    elif account_option == 2:
+                        show_books_to_add(cursor, my_user_id)
+                        book_id = int(input("\n        Enter the ID of the book you want to add: "))
+                        add_book_to_wishlist(cursor, my_user_id, book_id)
+                        db.commit()
+                        print(f"\n        Book ID: {book_id} was added to your wishlist!")
+
+                    if not 0 <= account_option <= 3:
+                        print("\n      Invalid option, please retry...")
+
+                    account_option = show_account_menu()
+
+            if not 0 <= user_selection <= 4:
+                print("\n      Invalid option, please retry...")
+
+            user_selection = show_menu()
+
+        print("\n\n  Program terminated...")
+
+    except mysql.connector.Error as err:
+        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+            print("  The supplied username or password are invalid")
+        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+            print("  The specified database does not exist")
+        else:
+            print(err)
+
+    finally:
+        db.close()
+
+if __name__ == "__main__":
+    main()
